@@ -4,7 +4,7 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
+    ('David Zwarg', 'dzwarg@azavea.com'),
 )
 
 MANAGERS = ADMINS
@@ -119,7 +119,25 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'returns.bigboard',
+    'djcelery',
+    'kombu.transport.django',
 )
+
+#
+# Celery
+#
+import djcelery
+from datetime import timedelta
+djcelery.setup_loader()
+
+BROKER_URL = 'django://'
+
+CELERYBEAT_SCHEDULE = {
+    'get-slice-5-min': {
+        'task': 'returns.bigboard.tasks.get_slice',
+        'schedule': timedelta(seconds=300)
+    }
+}
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

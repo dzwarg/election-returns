@@ -22,8 +22,13 @@ class Result(models.Model):
     vote_count = models.IntegerField()
     total_delegates = models.IntegerField()
 
-    def __init__(json):
-        pass
+
+    def loadjson(self, data):
+        for key in data.iterkeys():
+            if hasattr(self, key):
+                setattr(self, key, data[key])
+
+        self.save()
 
 
 class Race(models.Model):
@@ -53,6 +58,35 @@ class Race(models.Model):
     pct_report = models.CharField(max_length=10)
 
 
+    def loadjson(self, data):
+        for key in data.iterkeys():
+            if key != 'results' and hasattr(self, key):
+                setattr(self, key, data[key])
+
+        self.save()
+
+        for r in data['results']:
+            result = Result()
+            result.loadjson(r) # performs save, too
+
+            self.results.add(result)
+
+        self.save()
+
+
 class Slice(models.Model):
     races = models.ManyToManyField(Race)
     timestamp = models.IntegerField()
+
+
+    def loadjson(self, data):
+        self.timestamp = data['timestamp']
+        self.save()
+
+        for r in data['races']:
+            race = Race()
+            race.loadjson(r) # performs save, too
+
+            self.races.add(race)
+
+        self.save()
