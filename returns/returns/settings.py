@@ -11,8 +11,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'data/returns.db',                      # Or path to database file if using sqlite3.
+        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'elections',                      # Or path to database file if using sqlite3.
+        'HOST': 'localhost',
+        'PORT': 5432,
+        'USER': 'elections',
+        'PASSWORD': 'returns'
     }
 }
 
