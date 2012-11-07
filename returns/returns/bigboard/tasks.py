@@ -37,4 +37,4 @@ def get_slice():
 
     logger.info('Retrieved and saved time slice: %s' % stat)
 
-    return stat
+    return {'sleep':random_delay, 'status':stat}
