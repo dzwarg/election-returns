@@ -1,0 +1,136 @@
+<html>
+    <head>
+    <title>Bigboard Alternate Visualizations</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf8"/>
+    <script type="text/javascript" src="http://d3js.org/d3.v2.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <style type="text/css">
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+h1 {
+    display: inline;
+}
+
+div#viz {
+    position:absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9;
+}
+
+g.timeline path {
+    stroke-width: 1px;
+    fill: none;
+}
+
+path.rep {
+    stroke: #ff0000;
+}
+path.dem {
+    stroke: #0000ff;
+}
+    </style>
+    </head>
+    <body>
+        <h1>Bigboard Alternate Visualizations</h1>
+        <p>
+        <div id="viz"></div>
+        <script type="text/javascript">
+var x,y,
+    h = document.body.clientHeight,
+    w = document.body.clientWidth,
+    margin = {top: 60, right: 25, bottom: 25, left: 25},
+    width = w - margin.left - margin.right,
+    height = h - margin.top - margin.bottom,
+    viz = d3.select('#viz')
+        .append('svg')
+        .attr('width', w)
+        .attr('height', h);
+
+var line = d3.svg.line()
+    .interpolate('basis')
+    .x(function(d,i) { 
+        return x(i); 
+    })
+    .y(function(d,i) { 
+        return y(d); 
+    });
+
+
+function load() {
+    d3.json('bystate/', function(json) {
+        var data = [], node;
+        for (var s in json) {
+            var o = {};
+            o[s] = json[s];
+            data.push(o);
+        }
+
+        var node = viz.selectAll('g.timeline')
+            .data(data)
+            .enter()
+            .append('g')
+            .attr('class', 'timeline')
+            .attr('transform', 'translate('+margin.left+','+margin.top+')');
+
+        x = d3.scale.linear()
+            .domain([0, json.AK.REP.length])
+            .range([0, width]);
+
+        node.each(function(d,i) {
+            var e = d3.select(this);
+            e.append('rect')
+                .attr('transform', function(){ 
+                    return 'translate(0,'+(height*i/data.length)+')'; 
+                })
+                .attr('width', width)
+                .attr('height', height/data.length)
+                .style('stroke', 'rgb(204,204,204)')
+                .style('stroke-width', 1)
+                .style('fill', 'rgb(255,255,255)');
+
+            // there is only one, but it's a property
+            for (var s in d) {
+                var ry = d3.max(d[s].REP),
+                    dy = d3.max(d[s].DEM),
+                    mx = (ry > dy) ? ry : dy;
+
+                y = d3.scale.linear()
+                    .range([height/50,0])
+                    .domain([0,mx]);
+            }
+
+            e.append('path')
+                .attr('transform', function(){ 
+                    return 'translate(0,'+(height*i/data.length)+')'; 
+                })
+                .attr('d', function(d) { 
+                    for (var s in d) {
+                        return line(d[s].DEM); 
+                    }
+                })
+                .attr('class', 'dem');
+
+            e.append('path')
+                .attr('transform', function(){ 
+                    return 'translate(0,'+(height*i/data.length)+')'; 
+                })
+                .attr('d', function(d) { 
+                    for (var s in d) {
+                        return line(d[s].REP); 
+                    }
+                })
+                .attr('class', 'rep');
+        });
+    });
+};
+
+load();
+        
+        </script>
+    </body>
+</html>
