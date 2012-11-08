@@ -88,12 +88,63 @@ function load() {
             states.append($('<option/>').val(data.length-1).text(s));
         }
 
-        x = d3.scale.linear()
-            .domain([0, nslices])
-            .range([0, width]);
-
         showTimeline([0,1], nslices);
     });
+};
+
+// get the first key out of d
+function getState(d) {
+    for (var s in d) {
+        d[s].state = s;
+        return d[s];
+    }
+};
+
+function trimEnds() {
+    var begin = 2000,
+        end = 0,
+        trimmed = [];
+   
+    for (var h = 0; h < arguments.length; h++) {
+        var st = getState(arguments[h]),
+            types = ['REP','DEM'];
+        for (var i in types) {
+            var stp = st[types[i]],
+                mn = stp[0],
+                mx = stp[stp.length-1],
+                mybegin = 0,
+                myend = stp.length;
+
+            for (var j = 0; j < stp.length; j++) {
+                if (stp[j] == mn) mybegin = j;
+                else break;
+            }
+
+            for (var j = stp.length-1; j >= 0; j--) {
+                if (stp[j] == mx) myend = j;
+                else break;
+            }
+
+            if (mybegin < begin) begin = mybegin;
+            if (myend > end) end = myend;
+        }
+    }
+
+    for (var h = 0; h < arguments.length; h++) {
+        var st = getState(arguments[h]),
+            types = ['REP','DEM'],
+            trim = {};
+
+        trim[st.state] = {};
+
+        for (var i in types) {
+            var stp = st[types[i]];
+            trim[st.state][types[i]] = stp.slice(begin,end);
+        }
+        trimmed.push(trim);
+    }
+
+    return trimmed;
 };
 
 function showTimeline(stidx, nslices) {
@@ -105,19 +156,22 @@ function showTimeline(stidx, nslices) {
     var g = viz.append('g')
             .attr('class', 'timeline')
             .attr('transform', 'translate('+margin.left+','+margin.top+')'),
-        mydata = [data[stidx[0]], data[stidx[1]]],
+        mydata = trimEnds(data[stidx[0]], data[stidx[1]]),
         node = g.selectAll('g.state')
             .data(mydata)
             .enter()
             .append('g')
             .attr('class', 'state');
 
+    x = d3.scale.linear()
+        .domain([0, getState(mydata[0]).REP.length])
+        .range([0, width]);
+
     y = d3.scale.linear()
-        .range([height/stidx.length,0])
+        .range([height/stidx.length-1,1])
         .domain([0,d3.max(mydata, function(d){
-            for (var s in d) {
-                return d3.max([d3.max(d[s].REP), d3.max(d[s].DEM)]);
-            }
+            var s = getState(d);
+            return d3.max([d3.max(s.REP), d3.max(s.DEM)]);
         })]);
 
     node.each(function(d,i) {
@@ -147,16 +201,14 @@ function showTimeline(stidx, nslices) {
         function draw(n) {
             e.select('path.dem')
                 .attr('d', function(d) { 
-                    for (var s in d) {
-                        return line(d[s].DEM.slice(0,n)); 
-                    }
+                    var s = getState(d);
+                    return line(s.DEM.slice(0,n)); 
                 });
 
             e.select('path.rep')
                 .attr('d', function(d) { 
-                    for (var s in d) {
-                        return line(d[s].REP.slice(0,n)); 
-                    }
+                    var s = getState(d);
+                    return line(s.REP.slice(0,n)); 
                 });
         };
 
