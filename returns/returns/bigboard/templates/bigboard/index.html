@@ -22,6 +22,11 @@ div#viz {
     z-index: 9;
 }
 
+select {
+    position: relative;
+    z-index: 10;
+}
+
 g.timeline path {
     stroke-width: 1px;
     fill: none;
@@ -37,7 +42,7 @@ path.dem {
     </head>
     <body>
         <h1>Bigboard Alternate Visualizations</h1>
-        <p>
+        <select id="state1"></select> vs. <select id="state2"></select>
         <div id="viz"></div>
         <script type="text/javascript">
 var x,y,
@@ -46,6 +51,7 @@ var x,y,
     margin = {top: 60, right: 25, bottom: 25, left: 25},
     width = w - margin.left - margin.right,
     height = h - margin.top - margin.bottom,
+    data = [],
     viz = d3.select('#viz')
         .append('svg')
         .attr('width', w)
@@ -63,68 +69,102 @@ var line = d3.svg.line()
 
 function load() {
     d3.json('bystate/', function(json) {
-        var data = [], node;
+        var nslices = json.AK.REP.length,
+            states = $('#state1, #state2');
+
+        $('select').change(function(){
+            var stidx = [
+                +$('#state1').val(),
+                +$('#state2').val()
+            ];
+            d3.select('rect, path').remove();
+            showTimeline(stidx);
+        });
+
         for (var s in json) {
             var o = {};
             o[s] = json[s];
             data.push(o);
+            states.append($('<option/>').val(data.length-1).text(s));
         }
 
-        var node = viz.selectAll('g.timeline')
-            .data(data)
-            .enter()
-            .append('g')
-            .attr('class', 'timeline')
-            .attr('transform', 'translate('+margin.left+','+margin.top+')');
-
         x = d3.scale.linear()
-            .domain([0, json.AK.REP.length])
+            .domain([0, nslices])
             .range([0, width]);
 
-        node.each(function(d,i) {
-            var e = d3.select(this);
-            e.append('rect')
-                .attr('transform', function(){ 
-                    return 'translate(0,'+(height*i/data.length)+')'; 
-                })
-                .attr('width', width)
-                .attr('height', height/data.length)
-                .style('stroke', 'rgb(204,204,204)')
-                .style('stroke-width', 1)
-                .style('fill', 'rgb(255,255,255)');
+        showTimeline([0,1], nslices);
+    });
+};
 
-            // there is only one, but it's a property
+function showTimeline(stidx, nslices) {
+    $('#state1').val(stidx[0]);
+    $('#state2').val(stidx[1]);
+
+    viz.select('g.timeline').remove();
+
+    var g = viz.append('g')
+            .attr('class', 'timeline')
+            .attr('transform', 'translate('+margin.left+','+margin.top+')'),
+        mydata = [data[stidx[0]], data[stidx[1]]],
+        node = g.selectAll('g.state')
+            .data(mydata)
+            .enter()
+            .append('g')
+            .attr('class', 'state');
+
+    y = d3.scale.linear()
+        .range([height/stidx.length,0])
+        .domain([0,d3.max(mydata, function(d){
             for (var s in d) {
-                var ry = d3.max(d[s].REP),
-                    dy = d3.max(d[s].DEM),
-                    mx = (ry > dy) ? ry : dy;
-
-                y = d3.scale.linear()
-                    .range([height/50,0])
-                    .domain([0,mx]);
+                return d3.max([d3.max(d[s].REP), d3.max(d[s].DEM)]);
             }
+        })]);
 
-            e.append('path')
-                .attr('transform', function(){ 
-                    return 'translate(0,'+(height*i/data.length)+')'; 
-                })
+    node.each(function(d,i) {
+        var e = d3.select(this);
+        e.append('rect')
+            .attr('transform', function(){ 
+                return 'translate(0,'+(height*i/stidx.length)+')'; 
+            })
+            .attr('width', width)
+            .attr('height', height/stidx.length)
+            .style('stroke', 'rgb(204,204,204)')
+            .style('stroke-width', 1)
+            .style('fill', 'rgb(255,255,255)');
+
+        e.append('path')
+            .attr('class', 'dem')
+            .attr('transform', function(){ 
+                return 'translate(0,'+(height*i/stidx.length)+')'; 
+            });
+
+        e.append('path')
+            .attr('class', 'rep')
+            .attr('transform', function(){ 
+                return 'translate(0,'+(height*i/stidx.length)+')'; 
+            });
+
+        function draw(n) {
+            e.select('path.dem')
                 .attr('d', function(d) { 
                     for (var s in d) {
-                        return line(d[s].DEM); 
+                        return line(d[s].DEM.slice(0,n)); 
                     }
-                })
-                .attr('class', 'dem');
+                });
 
-            e.append('path')
-                .attr('transform', function(){ 
-                    return 'translate(0,'+(height*i/data.length)+')'; 
-                })
+            e.select('path.rep')
                 .attr('d', function(d) { 
                     for (var s in d) {
-                        return line(d[s].REP); 
+                        return line(d[s].REP.slice(0,n)); 
                     }
-                })
-                .attr('class', 'rep');
+                });
+        };
+
+        var n = 1;
+        d3.timer(function(){
+            draw(n);
+            n += 2;
+            return (n >= nslices);
         });
     });
 };
