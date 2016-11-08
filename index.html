@@ -1,0 +1,218 @@
+<html>
+<head>
+<script src="http://static.simile.mit.edu/timeplot/api/1.0/timeplot-api.js" type="text/javascript"></script>
+<script type="text/javascript">
+/**
+ * Data Source that generates an absolute percentage, given two relative percents,
+ * and a total percent responding.
+ * 
+ * @constructor
+ */
+Timeplot.ColumnAbsPctSource = function(eventSource, column1, column2) {
+    Timeplot.ColumnSource.apply(this, arguments);
+    this._column2 = column2 - 1;
+};
+
+Object.extend(Timeplot.ColumnAbsPctSource.prototype,Timeplot.ColumnSource.prototype);
+
+Timeplot.ColumnAbsPctSource.prototype._getValue = function(event) {
+    var a = parseFloat(event.getValues()[this._column]);
+    var b = parseFloat(event.getValues()[this._column2]);
+    return a * (b/100);
+}
+
+/** end timeplot addition **/
+
+var tp;
+
+function init() {
+  var demSrc = new Timeplot.DefaultEventSource();
+  var repSrc = new Timeplot.DefaultEventSource();
+  var callSrc = new Timeplot.DefaultEventSource();
+
+  var timeGeometry = new Timeplot.DefaultTimeGeometry({
+    gridColor: new Timeplot.Color("#000000"),
+    axisLabelsPlacement: "top"
+  });
+
+  var valueGeometry = new Timeplot.DefaultValueGeometry({
+    gridColor: "#000000",
+    min: 0,
+    max: 325
+  });
+
+  var pctValueGeometry = new Timeplot.DefaultValueGeometry({
+    gridColor: "#000000",
+    min: 0,
+    max: 100
+  });
+  
+  var plotInfo = [
+    Timeplot.createPlotInfo({
+      id: "democraticElectoralVotes",
+      dataSource: new Timeplot.ColumnSource(demSrc,1),
+      showValues: true,
+      timeGeometry: timeGeometry,
+      valueGeometry: valueGeometry,
+      lineColor: "#0000FF",
+      lineWidth: 3
+    }),
+    Timeplot.createPlotInfo({
+      id: "republicanElectoralVotes",
+      dataSource: new Timeplot.ColumnSource(repSrc,1),
+      showValues: true,
+      timeGeometry: timeGeometry,
+      valueGeometry: valueGeometry,
+      lineColor: "#FF0000",
+      lineWidth: 3
+    }),
+    Timeplot.createPlotInfo({
+      id: "calledStates",
+      timeGeometry: timeGeometry,
+      eventSource: callSrc,
+      lineColor: "#000000"
+    })
+  ];
+
+  var src = null;
+  var st = null;
+  var stId = "st";
+  var re = new RegExp( stId + "=([^&]+)" );
+  if ( re.test( window.location.href ) ) {
+    src = new Timeplot.DefaultEventSource();
+    st = RegExp.$1;
+
+    document.getElementById(stId).value = RegExp.$1;
+
+    plotInfo.push( Timeplot.createPlotInfo({
+      id: "stateDemocraticPct",
+      dataSource: new Timeplot.ColumnAbsPctSource(src,1,3),
+      showValues: true,
+      timeGeometry: timeGeometry,
+      valueGeometry: pctValueGeometry,
+      lineColor: "#0000CC",
+      lineWidth: 1.5
+    }));
+    plotInfo.push( Timeplot.createPlotInfo({
+      id: "stateRepublicanPct",
+      dataSource: new Timeplot.ColumnAbsPctSource(src,2,3),
+      showValues: true,
+      timeGeometry: timeGeometry,
+      valueGeometry: pctValueGeometry,
+      lineColor: "#CC0000",
+      lineWidth: 1.5
+    }));
+    plotInfo.push( Timeplot.createPlotInfo({
+      id: "stateReportPct",
+      dataSource: new Timeplot.ColumnSource(src,3),
+      showValues: true,
+      timeGeometry: timeGeometry,
+      valueGeometry: pctValueGeometry,
+      lineColor: "#66CC66"
+    }));
+  }
+                            
+  tp = Timeplot.create(document.getElementById("my-timeplot"), plotInfo);
+  tp.loadText("dem_total", ",", demSrc);
+  tp.loadText("rep_total", ",", repSrc);
+  tp.loadXML("called_states.xml", callSrc);
+  if ( src ) {
+    tp.loadText("states/"+st, ",", src);
+  }
+}
+
+var resizeTimerID = null;
+function resize() {
+  if (resizeTimerID == null) {
+    resizeTimerID = window.setTimeout(function() {
+      resizeTimerID = null;
+      timeplot.repaint();
+    }, 100);
+  }
+}
+
+</script>
+</head>
+<body onload="init();">
+<h1>Time Plot Of Election Returns</h1>
+<div id="my-timeplot" style="height: 150px;"></div>
+<div style="text-align:center;margin-bottom:0.75em;"><span style="font-weight:bold;">legend</span>: 
+  <span style="font-weight:bold;color:#0000ff">dem electoral votes (#)</span>
+  <span style="font-weight:bold;color:#ff0000">rep electoral votes (#)</span>
+  <span style="color:#0000cc">dem state vote (%)</span>
+  <span style="color:#cc0000">rep state vote (%)</span>
+  <span style="color:#66cc66">precincts reporting (%)</span>
+</div>
+<div style="text-align:center;font-size:0.9em;margin:0.25em;">Select a state to compare to national returns:
+  <form action="" id="form" style="display:inline;">
+  <select onchange="document.forms[0].submit();" id="st" name="st">
+    <option value="" selected="true">Select a State</option>
+    <!--
+    <option value="Alabama">Alabama</option>
+    <option value="Alaska">Alaska</option>
+    <option value="Arizona">Arizona</option>
+    -->
+    <option value="Arkansas">Arkansas</option>
+    <option value="California">California</option>
+    <option value="Colorado">Colorado</option>
+    <option value="Connecticut">Connecticut</option>
+    <option value="Delaware">Delaware</option>
+    <option value="District_of_Columbia">District of Columbia</option>
+    <option value="Florida">Florida</option>
+    <option value="Georgia">Georgia</option>
+    <option value="Hawaii">Hawaii</option>
+    <option value="Idaho">Idaho</option>
+    <option value="Illinois">Illinois</option>
+    <option value="Indiana">Indiana</option>
+    <option value="Iowa">Iowa</option>
+    <option value="Kansas">Kansas</option>
+    <option value="Kentucky">Kentucky</option>
+    <option value="Louisiana">Louisiana</option>
+    <option value="Maine">Maine</option>
+    <option value="Maryland">Maryland</option>
+    <option value="Massachusetts">Massachusetts</option>
+    <option value="Michigan">Michigan</option>
+    <option value="Minnesota">Minnesota</option>
+    <option value="Mississippi">Mississippi</option>
+    <option value="Missouri">Missouri</option>
+    <option value="Montana">Montana</option>
+    <option value="Nebraska">Nebraska</option>
+    <option value="Nevada">Nevada</option>
+    <option value="New_Hampshire">New Hampshire</option>
+    <option value="New_Jersey">New Jersey</option>
+    <option value="New_Mexico">New Mexico</option>
+    <option value="New_York">New York</option>
+    <option value="North_Carolina">North Carolina</option>
+    <option value="North_Dakota">North Dakota</option>
+    <option value="Ohio">Ohio</option>
+    <option value="Oklahoma">Oklahoma</option>
+    <option value="Oregon">Oregon</option>
+    <option value="Pennsylvania">Pennsylvania</option>
+    <option value="Rhode_Island">Rhode Island</option>
+    <option value="South_Carolina">South Carolina</option>
+    <option value="South_Dakota">South Dakota</option>
+    <option value="Tennessee">Tennessee</option>
+    <option value="Texas">Texas</option>
+    <option value="Utah">Utah</option>
+    <option value="Vermont">Vermont</option>
+    <option value="Virginia">Virginia</option>
+    <option value="Washington">Washington</option>
+    <option value="West_Virginia">West Virginia</option>
+    <option value="Wisconsin">Wisconsin</option>
+    <option value="Wyoming">Wyoming</option>
+  </select>
+  </form>
+</div>
+<div style="margin-top:20px;">This chart shows the election returns from the 2008 Presidential 
+election, as reported by the New York Times "Election Dashboard". The results were polled once a 
+minute, and post processed with <a href="http://www.gnu.org/software/sed/">sed</a> and <a 
+href="http://www.gnu.org/software/gawk/">awk</a> in order to convert it into a CSV file.  The data 
+files were then loaded into the Timeplot JavaScript API. (All times are <a 
+href="http://en.wikipedia.org/wiki/Mountain_Time_Zone">MST</a>)</div>
+
+<div style="font-size:0.75em;margin-top:20px;color:#cccccc;">Sorry, AL, AK, AZ: a parsing error has occurred.</div>
+
+<hr>
+<div style="text-align:center;color:#666666;font-size:0.9em;">david dot a at zwarg dot com<br/>&copy; 2008 http://www.zwarg.com/</div>
+</body>
+</html>
