@@ -3,11 +3,9 @@
 import re
 import json
 import operator
+import glob
 
-def main():
-    with open('LIVE.xml', 'r') as live:
-        lines = live.readlines()
-
+def convert(returns):
     data = {}
 
     # Parse timestamp
@@ -19,7 +17,7 @@ def main():
     #
     #   {'timestamp': '2016-11-09 08:03:51'}
     #
-    m = re.search(r".*ts '(?P<timestamp>.*)'", lines[0])
+    m = re.search(r".*ts '(?P<timestamp>.*)'", returns[0])
     if m:
         data.update({'timestamp':m.group('timestamp')})
 
@@ -39,7 +37,7 @@ def main():
         }),
         map(
             lambda x: x.split(';'),
-            lines[1].split('|')
+            returns[1].split('|')
         )
     )
 
@@ -54,7 +52,7 @@ def main():
     #   delegates_=Y
     #   delegates_rep=Z
     #
-    (delegates_dem,delegates_,delegates_rep,) = lines[2].split('|')[0].split(';')
+    (delegates_dem,delegates_,delegates_rep,) = returns[2].split('|')[0].split(';')
     data.update({
         'delegates': {
             'democrat': delegates_dem,
@@ -74,7 +72,7 @@ def main():
     # Parse state races
     pres_races = filter(
         pres_only,
-        lines[3:]
+        returns[3:]
     )
 
     # Parse the summary components of a races
@@ -217,7 +215,24 @@ def main():
         )))
     })
 
-    print json.dumps(data)
+    return data
+    
+def main():
+    data_files = []
+
+    for f in glob.iglob('data/returns.*.data'):
+        with open(f, 'r') as live:
+            converted = convert(live.readlines())
+        
+        data_file = f.replace('.data', '.json')
+        data_files.append(data_file)
+        
+        with open(data_file, 'w') as data:
+            data.write(json.dumps(converted))
+            
+    with open('./index.js', 'w') as index:
+        index.write(json.dumps({'files':data_files}))
+            
 
 if __name__ == '__main__':
     main()
