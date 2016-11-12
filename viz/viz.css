@@ -1,0 +1,30 @@
+html {
+  font-family: sans-serif, Helvetica, Arial;
+}
+
+.bar {
+  fill: steelblue;
+}
+
+.axis path {
+  display: none;
+}
+
+/* my fake console */
+.console {
+  font-family: monospace, Courier;
+  position: relative;
+}
+
+.console div {
+  padding-left: 10px;
+  border-top: 1px solid #ddd;
+  min-height: 19px;
+}
+
+.console div:before {
+  content: '>';
+  position: absolute;
+  left: 0px;
+  color: #ddd;
+}

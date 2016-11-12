@@ -5,6 +5,12 @@ import json
 import operator
 import glob
 
+class ParseError(Exception):
+    def __init__(self, line, cause):
+        self.line = line
+        self.cause = cause
+    
+
 def convert(returns):
     data = {}
 
@@ -17,9 +23,12 @@ def convert(returns):
     #
     #   {'timestamp': '2016-11-09 08:03:51'}
     #
-    m = re.search(r".*ts '(?P<timestamp>.*)'", returns[0])
-    if m:
-        data.update({'timestamp':m.group('timestamp')})
+    try:
+        m = re.search(r".*ts '(?P<timestamp>.*)'", returns[0])
+        if m:
+            data.update({'timestamp':m.group('timestamp')})
+    except Exception as ex:
+        raise ParseError(returns[0], ex)
 
     # Parse candidates
     # Convert a lookup table like:
@@ -31,15 +40,18 @@ def convert(returns):
     #   { 'X':'Person One', 'Y':'Person Two'}
     #
     candidates = {}
-    map(
-        lambda x: candidates.update({
-            x[0]: "{0} {1}".format(x[2], x[1])
-        }),
+    try:
         map(
-            lambda x: x.split(';'),
-            returns[1].split('|')
+            lambda x: candidates.update({
+                x[0]: "{0} {1}".format(x[2], x[1])
+            }),
+            map(
+                lambda x: x.split(';'),
+                returns[1].split('|')
+            )
         )
-    )
+    except Exception as ex:
+        raise ParseError(returns[1], ex)
 
     # Parse captured delegates
     # Convert a summary line like:
@@ -222,7 +234,14 @@ def main():
 
     for f in glob.iglob('data/returns.*.data'):
         with open(f, 'r') as live:
-            converted = convert(live.readlines())
+            returns = live.readlines()
+            try:
+                converted = convert(returns)
+            except ParseError as ex:
+                print "Error parsing."
+                print "File:", f
+                print "Line:"
+                print ex.line
         
         data_file = f.replace('.data', '.json')
         data_files.append(data_file)
